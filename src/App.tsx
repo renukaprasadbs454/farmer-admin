@@ -41,6 +41,11 @@ import PaymentsPage from './pages/PaymentsPage';
 import VehicleServicesPage from './pages/VehicleServicesPage';
 import LabourServicesPage from './pages/LabourServicesPage';
 import SupportDeskPage from './pages/SupportDeskPage';
+import ProductOrdersPage from './pages/ProductOrdersPage';
+import PartnerOfferingsPage from './pages/PartnerOfferingsPage';
+import OperationsReviewPage from './pages/OperationsReviewPage';
+import CompliancePage from './pages/CompliancePage';
+import NotFoundPage from './pages/NotFoundPage';
 import { 
   autoLoginAdmin, 
   loginAdminApi, 
@@ -80,6 +85,8 @@ function Sidebar() {
       items: [
         { name: 'Vehicle Services', path: '/catalog/vehicles', icon: Truck },
         { name: 'Labour Services', path: '/catalog/labour', icon: Wrench },
+        { name: 'Vehicle Offerings', path: '/catalog/vehicle-offerings', icon: Tractor },
+        { name: 'Labour Offerings', path: '/catalog/labour-offerings', icon: HardHat },
         { name: 'Product Approvals', path: '/catalog/approvals', icon: CheckSquare },
         { name: 'Subscriptions', path: '/catalog/subscriptions', icon: CalendarRange },
       ]
@@ -188,6 +195,10 @@ function Header({
     { name: 'Labour Services & Wage Matrix', path: '/catalog/labour', category: 'Catalog', desc: 'Create & manage labour tasks, daily wages, and team sizes' },
     { name: 'Product Approvals & Catalog', path: '/catalog/approvals', category: 'Catalog', desc: 'Review seller catalog listings' },
     { name: 'Agri Help Desk & Support', path: '/support', category: 'Support', desc: 'Farmer issues and franchise tickets' },
+    { name: 'Privacy Policy', path: '/privacy', category: 'Compliance', desc: 'Admin data access and privacy policy' },
+    { name: 'Cookie & Data Use', path: '/cookie-policy', category: 'Compliance', desc: 'Admin portal session storage and browser data' },
+    { name: 'Terms of Use', path: '/terms', category: 'Compliance', desc: 'Admin operating responsibilities and platform rules' },
+    { name: 'Error Recovery', path: '/error', category: 'System', desc: 'Admin fallback and recovery guidance' },
   ];
 
   const searchResults = searchQuery.trim()
@@ -1259,15 +1270,6 @@ function Header({
   );
 }
 
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center min-h-[400px]">
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">{title}</h2>
-      <p className="text-slate-500">This module is currently under construction.</p>
-    </div>
-  );
-}
-
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(getAuthToken()));
   const [regions, setRegions] = useState<any[]>([]);
@@ -1455,19 +1457,26 @@ function App() {
 
               {/* Sales & Dispatch */}
               <Route path="/sales/requests" element={<JobAssignment selectedRegionId={selectedRegionId} />} />
-              <Route path="/sales/orders" element={<PlaceholderPage title="Product Buying & Selling Orders" />} />
+              <Route path="/sales/orders" element={<ProductOrdersPage selectedRegionId={selectedRegionId} />} />
               <Route path="/sales/payments" element={<PaymentsPage selectedRegionId={selectedRegionId} />} />
-              <Route path="/sales/issues" element={<PlaceholderPage title="Job Issues & Proof" />} />
+              <Route path="/sales/issues" element={<OperationsReviewPage selectedRegionId={selectedRegionId} mode="ISSUES" />} />
 
               {/* Catalog & Settings */}
               <Route path="/catalog/vehicles" element={<VehicleServicesPage selectedRegionId={selectedRegionId} />} />
               <Route path="/catalog/labour" element={<LabourServicesPage selectedRegionId={selectedRegionId} />} />
+              <Route path="/catalog/vehicle-offerings" element={<PartnerOfferingsPage selectedRegionId={selectedRegionId} category="VEHICLE" />} />
+              <Route path="/catalog/labour-offerings" element={<PartnerOfferingsPage selectedRegionId={selectedRegionId} category="LABOUR" />} />
               <Route path="/catalog/approvals" element={<ProductApprovalsPage selectedRegionId={selectedRegionId} />} />
-              <Route path="/catalog/subscriptions" element={<PlaceholderPage title="Subscriptions" />} />
+              <Route path="/catalog/subscriptions" element={<OperationsReviewPage selectedRegionId={selectedRegionId} mode="SUBSCRIPTIONS" />} />
 
               {/* Community & Support */}
-              <Route path="/reviews" element={<PlaceholderPage title="Reviews & Ratings" />} />
+              <Route path="/reviews" element={<OperationsReviewPage selectedRegionId={selectedRegionId} mode="REVIEWS" />} />
               <Route path="/support" element={<SupportDeskPage />} />
+              <Route path="/privacy" element={<CompliancePage kind="privacy" />} />
+              <Route path="/cookie-policy" element={<CompliancePage kind="cookie" />} />
+              <Route path="/terms" element={<CompliancePage kind="terms" />} />
+              <Route path="/error" element={<CompliancePage kind="error" />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
         </div>

@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, CheckCircle, RefreshCw, MapPin, Store } from 'lucide-react';
-import { fetchProducts, approveProductStatus } from '../services/api';
+import type { FormEvent } from 'react';
+import { ShoppingBag, CheckCircle, RefreshCw, MapPin, Store, Edit3, Trash2, X } from 'lucide-react';
+import { approveProductStatus, deleteProductApi, fetchProducts, updateProductApi } from '../services/api';
 
 export default function ProductApprovalsPage({ selectedRegionId }: { selectedRegionId?: string }) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED'>('PENDING');
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [productForm, setProductForm] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -27,11 +31,62 @@ export default function ProductApprovalsPage({ selectedRegionId }: { selectedReg
   }, [selectedRegionId, filter]);
 
   const handleApprovalToggle = async (productId: string, isApproved: boolean) => {
+    setSavingId(productId);
     try {
       await approveProductStatus(productId, isApproved);
-      loadProducts();
+      await loadProducts();
     } catch (err: any) {
       alert(err.message || 'Failed to update product approval');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const openEdit = (product: any) => {
+    setEditingProduct(product);
+    setProductForm({
+      title: product.title || '',
+      description: product.description || '',
+      price: product.price ? String(product.price) : '',
+      mrp: product.mrp ? String(product.mrp) : '',
+      discountPercent: product.discountPercent ? String(product.discountPercent) : '',
+      unit: product.unit || '',
+      packageSize: product.packageSize || '',
+      qualityGrade: product.qualityGrade || '',
+      quantityValue: product.quantityValue ? String(product.quantityValue) : '',
+      quantityUnit: product.quantityUnit || '',
+      minOrderQuantity: product.minOrderQuantity ? String(product.minOrderQuantity) : '',
+      stock: product.stock ? String(product.stock) : '',
+      storageInstructions: product.storageInstructions || '',
+      usageInstructions: product.usageInstructions || '',
+    });
+  };
+
+  const saveProduct = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingProduct) return;
+    setSavingId(editingProduct.id);
+    try {
+      await updateProductApi(editingProduct.id, productForm);
+      setEditingProduct(null);
+      await loadProducts();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save product');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const deleteProduct = async (product: any) => {
+    if (!confirm(`Remove "${product.title}" from the marketplace catalog?`)) return;
+    setSavingId(product.id);
+    try {
+      await deleteProductApi(product.id);
+      await loadProducts();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete product');
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -99,7 +154,7 @@ export default function ProductApprovalsPage({ selectedRegionId }: { selectedReg
 
                 <div className="flex justify-between items-start gap-2 mb-2">
                   <h3 className="font-bold text-slate-900 text-base leading-tight">{p.title}</h3>
-                  <span className="text-lg font-black text-emerald-600">₹{p.price}</span>
+                  <span className="text-lg font-black text-emerald-600">Rs {p.price}</span>
                 </div>
 
                 <p className="text-xs text-slate-500 line-clamp-2 mb-4">{p.description}</p>
@@ -113,36 +168,116 @@ export default function ProductApprovalsPage({ selectedRegionId }: { selectedReg
                     <MapPin className="w-3.5 h-3.5 text-slate-400" />
                     <span>{p.region?.name} Region</span>
                   </div>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200/70">
+                    <span>Stock: <b>{p.stock}</b></span>
+                    <span>Pack: <b>{p.packageSize || p.unit}</b></span>
+                    <span>MRP: <b>{p.mrp ? `Rs ${p.mrp}` : 'N/A'}</b></span>
+                    <span>Discount: <b>{p.discountPercent || 0}%</b></span>
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
                   p.isApprovedByAdmin ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
                   {p.isApprovedByAdmin ? 'Online & Approved' : 'Pending Approval'}
                 </span>
 
-                {p.isApprovedByAdmin ? (
-                  <button
-                    onClick={() => handleApprovalToggle(p.id, false)}
-                    className="text-xs font-bold text-red-600 hover:underline"
-                  >
-                    Unpublish
+                <div className="flex items-center gap-1.5">
+                  {p.isApprovedByAdmin ? (
+                    <button
+                      onClick={() => handleApprovalToggle(p.id, false)}
+                      disabled={savingId === p.id}
+                      className="text-xs font-bold text-red-600 hover:underline disabled:opacity-50"
+                    >
+                      Unpublish
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleApprovalToggle(p.id, true)}
+                      disabled={savingId === p.id}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1 shadow-sm disabled:opacity-50"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" /> Approve
+                    </button>
+                  )}
+                  <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200" title="Edit product">
+                    <Edit3 className="w-3.5 h-3.5" />
                   </button>
-                ) : (
-                  <button
-                    onClick={() => handleApprovalToggle(p.id, true)}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1 shadow-sm"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" /> Approve Product
+                  <button onClick={() => deleteProduct(p)} disabled={savingId === p.id} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50" title="Delete product">
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                )}
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {editingProduct && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit Product Listing</h3>
+                <p className="text-xs text-slate-500">Price, package, stock, quality, and discount sync to the farmer marketplace</p>
+              </div>
+              <button onClick={() => setEditingProduct(null)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={saveProduct} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <ProductField label="Title" value={productForm.title} onChange={(value) => setProductForm({ ...productForm, title: value })} required />
+                <ProductField label="Price" value={productForm.price} onChange={(value) => setProductForm({ ...productForm, price: value })} type="number" required />
+                <ProductField label="MRP" value={productForm.mrp} onChange={(value) => setProductForm({ ...productForm, mrp: value })} type="number" />
+                <ProductField label="Discount Percent" value={productForm.discountPercent} onChange={(value) => setProductForm({ ...productForm, discountPercent: value })} type="number" />
+                <ProductField label="Package Size" value={productForm.packageSize} onChange={(value) => setProductForm({ ...productForm, packageSize: value })} />
+                <ProductField label="Quality Grade" value={productForm.qualityGrade} onChange={(value) => setProductForm({ ...productForm, qualityGrade: value })} />
+                <ProductField label="Quantity Value" value={productForm.quantityValue} onChange={(value) => setProductForm({ ...productForm, quantityValue: value })} type="number" />
+                <ProductField label="Quantity Unit" value={productForm.quantityUnit} onChange={(value) => setProductForm({ ...productForm, quantityUnit: value })} />
+                <ProductField label="Min Order Quantity" value={productForm.minOrderQuantity} onChange={(value) => setProductForm({ ...productForm, minOrderQuantity: value })} type="number" />
+                <ProductField label="Stock" value={productForm.stock} onChange={(value) => setProductForm({ ...productForm, stock: value })} type="number" />
+              </div>
+              <textarea value={productForm.description || ''} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} rows={3} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" placeholder="Description" />
+              <textarea value={productForm.storageInstructions || ''} onChange={(e) => setProductForm({ ...productForm, storageInstructions: e.target.value })} rows={2} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" placeholder="Storage instructions" />
+              <textarea value={productForm.usageInstructions || ''} onChange={(e) => setProductForm({ ...productForm, usageInstructions: e.target.value })} rows={2} className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs" placeholder="Usage instructions" />
+              <div className="pt-3 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onClick={() => setEditingProduct(null)} className="px-4 py-2.5 text-xs font-bold text-slate-600 rounded-xl hover:bg-slate-100">Cancel</button>
+                <button type="submit" disabled={savingId === editingProduct.id} className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold disabled:opacity-50">Save Product</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProductField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  required = false,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-bold text-slate-600 uppercase block mb-1">{label}</label>
+      <input
+        type={type}
+        required={required}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+      />
     </div>
   );
 }

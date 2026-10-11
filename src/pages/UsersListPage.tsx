@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import type { FormEvent } from 'react';
 import { 
   Users, 
   CheckCircle2, 
@@ -13,11 +14,20 @@ import {
   RefreshCw,
   Download,
   Eye,
+  Edit3,
+  Trash2,
+  RotateCcw,
   X,
   FileSpreadsheet,
   AlertCircle
 } from 'lucide-react';
-import { fetchUsersBySegment, approveUserStatus } from '../services/api';
+import {
+  approveUserStatus,
+  deleteUserProfileApi,
+  fetchUsersBySegment,
+  restoreUserProfileApi,
+  updateUserProfileApi,
+} from '../services/api';
 
 interface UsersListPageProps {
   role: 'FARMER' | 'SELLER' | 'SERVICEMAN' | 'LABOUR' | 'ADMIN';
@@ -33,6 +43,8 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
   const [approvalFilter, setApprovalFilter] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -50,7 +62,7 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchUsersBySegment(role, approvalFilter, selectedRegionId);
+      const res = await fetchUsersBySegment(role, approvalFilter, selectedRegionId, true);
       if (res.success && Array.isArray(res.data)) {
         setUsers(res.data);
       }
@@ -75,6 +87,105 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update user approval status');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setEditForm({
+      fullName: user.fullName || '',
+      address: user.address || '',
+      state: user.state || user.farmerProfile?.state || '',
+      district: user.district || user.farmerProfile?.district || '',
+      taluk: user.taluk || user.farmerProfile?.taluk || '',
+      village: user.village || user.farmerProfile?.village || '',
+      pincode: user.pincode || user.farmerProfile?.pincode || '',
+      shopName: user.sellerProfile?.shopName || '',
+      shopAddress: user.sellerProfile?.shopAddress || '',
+      gstNumber: user.sellerProfile?.gstNumber || '',
+      licenseNumber: user.sellerProfile?.licenseNumber || '',
+      deliveryRadiusKm: user.sellerProfile?.deliveryRadiusKm ? String(user.sellerProfile.deliveryRadiusKm) : '',
+      vehicleType: user.servicemanProfile?.vehicleType || '',
+      vehicleNumber: user.servicemanProfile?.vehicleNumber || '',
+      ratePerHour: user.servicemanProfile?.ratePerHour ? String(user.servicemanProfile.ratePerHour) : user.labourProfile?.hourlyRate ? String(user.labourProfile.hourlyRate) : '',
+      ratePerAcre: user.servicemanProfile?.ratePerAcre ? String(user.servicemanProfile.ratePerAcre) : '',
+      dailyRate: user.labourProfile?.dailyRate ? String(user.labourProfile.dailyRate) : '',
+      servicesOffered: user.labourProfile?.servicesOffered?.join(', ') || '',
+    });
+  };
+
+  const handleSaveEdit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingUser) return;
+    setActionLoadingId(editingUser.id);
+    try {
+      const payload: Record<string, any> = {
+        fullName: editForm.fullName,
+        address: editForm.address,
+        state: editForm.state,
+        district: editForm.district,
+        taluk: editForm.taluk,
+        village: editForm.village,
+        pincode: editForm.pincode,
+      };
+
+      if (role === 'SELLER') {
+        payload.sellerProfile = {
+          shopName: editForm.shopName,
+          shopAddress: editForm.shopAddress,
+          gstNumber: editForm.gstNumber,
+          licenseNumber: editForm.licenseNumber,
+          deliveryRadiusKm: editForm.deliveryRadiusKm,
+        };
+      }
+      if (role === 'SERVICEMAN') {
+        payload.servicemanProfile = {
+          vehicleType: editForm.vehicleType,
+          vehicleNumber: editForm.vehicleNumber,
+          ratePerHour: editForm.ratePerHour,
+          ratePerAcre: editForm.ratePerAcre,
+        };
+      }
+      if (role === 'LABOUR') {
+        payload.labourProfile = {
+          servicesOffered: editForm.servicesOffered.split(',').map((item) => item.trim()).filter(Boolean),
+          dailyRate: editForm.dailyRate,
+          hourlyRate: editForm.ratePerHour,
+        };
+      }
+
+      await updateUserProfileApi(editingUser.id, payload);
+      setEditingUser(null);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update user profile');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDeactivate = async (user: any) => {
+    if (!confirm(`Deactivate ${user.fullName}'s ${role.toLowerCase()} profile?`)) return;
+    setActionLoadingId(user.id);
+    try {
+      await deleteUserProfileApi(user.id);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to deactivate user profile');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRestore = async (user: any) => {
+    setActionLoadingId(user.id);
+    try {
+      await restoreUserProfileApi(user.id);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to restore user profile');
     } finally {
       setActionLoadingId(null);
     }
@@ -646,9 +757,9 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
 
                     {/* Actions Column */}
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
                         {/* Instant Quick Approval Buttons for Pending Sellers/Servicemen */}
-                        {user.approvalStatus === 'PENDING' && (
+                        {user.isActive !== false && user.approvalStatus === 'PENDING' && (
                           <>
                             <button
                               onClick={() => handleApproval(user.id, 'APPROVED')}
@@ -669,17 +780,24 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
                           </>
                         )}
 
-                        {user.approvalStatus === 'APPROVED' && (
-                          <button
-                            onClick={() => setSelectedUser(user)}
-                            className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
-                            title="View Full Profile"
-                          >
-                            <Eye className="w-3.5 h-3.5 text-slate-500" /> Details
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setSelectedUser(user)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 shadow-xs"
+                          title="View Full Profile"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-slate-500" /> Details
+                        </button>
 
-                        {user.approvalStatus === 'REJECTED' && (
+                        <button
+                          onClick={() => openEditModal(user)}
+                          disabled={actionLoadingId === user.id || user.isActive === false}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 disabled:opacity-50"
+                          title="Edit profile"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-slate-500" /> Edit
+                        </button>
+
+                        {user.isActive !== false && user.approvalStatus === 'REJECTED' && (
                           <button
                             onClick={() => handleApproval(user.id, 'APPROVED')}
                             disabled={actionLoadingId === user.id}
@@ -687,6 +805,26 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
                             title="Re-approve"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> Re-Approve
+                          </button>
+                        )}
+
+                        {user.isActive === false ? (
+                          <button
+                            onClick={() => handleRestore(user)}
+                            disabled={actionLoadingId === user.id}
+                            className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 disabled:opacity-50"
+                            title="Restore profile"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" /> Restore
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeactivate(user)}
+                            disabled={actionLoadingId === user.id}
+                            className="p-1.5 bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-lg transition-colors disabled:opacity-50"
+                            title="Deactivate profile"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -951,6 +1089,117 @@ export default function UsersListPage({ role, title, subtitle, selectedRegionId 
           </div>
         </div>
       )}
+
+      {editingUser && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-100 overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Edit {role.toLowerCase()} profile</h3>
+                <p className="text-xs text-slate-500">Updates are saved to the live backend profile tables</p>
+              </div>
+              <button
+                onClick={() => setEditingUser(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Field label="Full Name" value={editForm.fullName} onChange={(value) => setEditForm({ ...editForm, fullName: value })} required />
+                <Field label="Pincode" value={editForm.pincode} onChange={(value) => setEditForm({ ...editForm, pincode: value })} />
+                <Field label="State" value={editForm.state} onChange={(value) => setEditForm({ ...editForm, state: value })} />
+                <Field label="District" value={editForm.district} onChange={(value) => setEditForm({ ...editForm, district: value })} />
+                <Field label="Taluk" value={editForm.taluk} onChange={(value) => setEditForm({ ...editForm, taluk: value })} />
+                <Field label="Village" value={editForm.village} onChange={(value) => setEditForm({ ...editForm, village: value })} />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600 uppercase block mb-1">Address</label>
+                <textarea
+                  value={editForm.address || ''}
+                  onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+                />
+              </div>
+
+              {role === 'SELLER' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <Field label="Shop Name" value={editForm.shopName} onChange={(value) => setEditForm({ ...editForm, shopName: value })} />
+                  <Field label="Shop Address" value={editForm.shopAddress} onChange={(value) => setEditForm({ ...editForm, shopAddress: value })} />
+                  <Field label="GST Number" value={editForm.gstNumber} onChange={(value) => setEditForm({ ...editForm, gstNumber: value })} />
+                  <Field label="License Number" value={editForm.licenseNumber} onChange={(value) => setEditForm({ ...editForm, licenseNumber: value })} />
+                  <Field label="Delivery Radius Km" value={editForm.deliveryRadiusKm} onChange={(value) => setEditForm({ ...editForm, deliveryRadiusKm: value })} type="number" />
+                </div>
+              )}
+
+              {role === 'SERVICEMAN' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <Field label="Vehicle Type" value={editForm.vehicleType} onChange={(value) => setEditForm({ ...editForm, vehicleType: value })} />
+                  <Field label="Vehicle Number" value={editForm.vehicleNumber} onChange={(value) => setEditForm({ ...editForm, vehicleNumber: value })} />
+                  <Field label="Rate Per Hour" value={editForm.ratePerHour} onChange={(value) => setEditForm({ ...editForm, ratePerHour: value })} type="number" />
+                  <Field label="Rate Per Acre" value={editForm.ratePerAcre} onChange={(value) => setEditForm({ ...editForm, ratePerAcre: value })} type="number" />
+                </div>
+              )}
+
+              {role === 'LABOUR' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <Field label="Services Offered" value={editForm.servicesOffered} onChange={(value) => setEditForm({ ...editForm, servicesOffered: value })} />
+                  <Field label="Daily Rate" value={editForm.dailyRate} onChange={(value) => setEditForm({ ...editForm, dailyRate: value })} type="number" />
+                  <Field label="Hourly Rate" value={editForm.ratePerHour} onChange={(value) => setEditForm({ ...editForm, ratePerHour: value })} type="number" />
+                </div>
+              )}
+
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoadingId === editingUser.id}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all disabled:opacity-50"
+                >
+                  {actionLoadingId === editingUser.id ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  required = false,
+}: {
+  label: string;
+  value?: string;
+  onChange: (value: string) => void;
+  type?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-bold text-slate-600 uppercase block mb-1">{label}</label>
+      <input
+        type={type}
+        required={required}
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-slate-900 focus:bg-white"
+      />
     </div>
   );
 }

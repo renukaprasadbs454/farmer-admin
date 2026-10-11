@@ -100,13 +100,33 @@ export async function createRegionApi(payload: {
 }
 
 // Users API by Segment (Farmers, Sellers, Servicemen, Labours, Admins)
-export async function fetchUsersBySegment(role?: string, approvalStatus?: string, regionId?: string) {
+export async function fetchUsersBySegment(role?: string, approvalStatus?: string, regionId?: string, includeInactive?: boolean) {
   const params = new URLSearchParams();
   if (role) params.append('role', role);
   if (approvalStatus) params.append('approvalStatus', approvalStatus);
   if (regionId) params.append('regionId', regionId);
+  if (includeInactive) params.append('includeInactive', 'true');
 
   return request<any>(`/users?${params.toString()}`);
+}
+
+export async function updateUserProfileApi(profileId: string, payload: Record<string, any>) {
+  return request<any>(`/users/${profileId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteUserProfileApi(profileId: string) {
+  return request<any>(`/users/${profileId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function restoreUserProfileApi(profileId: string) {
+  return request<any>(`/users/${profileId}/restore`, {
+    method: 'PATCH',
+  });
 }
 
 export async function approveUserStatus(profileId: string, approvalStatus: 'APPROVED' | 'REJECTED' | 'SUSPENDED') {
@@ -129,6 +149,34 @@ export async function approveProductStatus(productId: string, isApproved: boolea
   return request<any>(`/products/${productId}/approve`, {
     method: 'PATCH',
     body: JSON.stringify({ isApproved }),
+  });
+}
+
+export async function updateProductApi(productId: string, payload: Record<string, any>) {
+  return request<any>(`/products/${productId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteProductApi(productId: string) {
+  return request<any>(`/products/${productId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchOrders(regionId?: string, status?: string) {
+  const params = new URLSearchParams();
+  if (regionId) params.append('regionId', regionId);
+  if (status && status !== 'ALL') params.append('status', status);
+
+  return request<any>(`/orders?${params.toString()}`);
+}
+
+export async function updateOrderStatusApi(orderId: string, payload: { orderStatus?: string; paymentStatus?: string }) {
+  return request<any>(`/orders/${orderId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
   });
 }
 
@@ -197,6 +245,41 @@ export async function deleteAvailableServiceApi(id: string) {
   });
 }
 
+export async function fetchPartnerServiceOfferings(params: {
+  regionId?: string;
+  category?: 'LABOUR' | 'VEHICLE' | 'ALL';
+  approvalStatus?: string;
+  includeInactive?: boolean;
+} = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.regionId) searchParams.append('regionId', params.regionId);
+  if (params.category && params.category !== 'ALL') searchParams.append('category', params.category);
+  if (params.approvalStatus && params.approvalStatus !== 'ALL') searchParams.append('approvalStatus', params.approvalStatus);
+  if (params.includeInactive) searchParams.append('includeInactive', 'true');
+
+  return request<any>(`/services/offerings?${searchParams.toString()}`);
+}
+
+export async function approvePartnerServiceOfferingApi(id: string, approvalStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED') {
+  return request<any>(`/services/offerings/${id}/approve`, {
+    method: 'PATCH',
+    body: JSON.stringify({ approvalStatus }),
+  });
+}
+
+export async function updatePartnerServiceOfferingApi(id: string, payload: Record<string, any>) {
+  return request<any>(`/services/offerings/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePartnerServiceOfferingApi(id: string) {
+  return request<any>(`/services/offerings/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 // ── Farmer Chat & Help Desk Endpoints ──
 export async function fetchAdminConversationsApi(status?: string, search?: string) {
   const params = new URLSearchParams();
@@ -215,4 +298,3 @@ export async function replyAdminConversationApi(id: string, text: string, mediaU
     body: JSON.stringify({ text, mediaUrl }),
   });
 }
-
