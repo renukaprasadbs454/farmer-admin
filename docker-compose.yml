@@ -1,0 +1,11 @@
+services:
+  farmer-mate-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:9443/api/v1}
+    container_name: farmer-mate-admin
+    restart: unless-stopped
+    ports:
+      - "3000:80"
