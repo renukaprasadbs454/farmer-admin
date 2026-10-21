@@ -31,7 +31,11 @@ import {
   Building2,
   UserPlus,
   Sliders,
-  BellOff
+  BellOff,
+  Banknote,
+  Umbrella,
+  Coins,
+  Warehouse
 } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
 import JobAssignment from './pages/JobAssignment';
@@ -46,6 +50,10 @@ import PartnerOfferingsPage from './pages/PartnerOfferingsPage';
 import OperationsReviewPage from './pages/OperationsReviewPage';
 import CompliancePage from './pages/CompliancePage';
 import NotFoundPage from './pages/NotFoundPage';
+import LoansPage from './pages/LoansPage';
+import InsurancePage from './pages/InsurancePage';
+import CropInvestPage from './pages/CropInvestPage';
+import WarehousePage from './pages/WarehousePage';
 import { 
   autoLoginAdmin, 
   loginAdminApi, 
@@ -78,6 +86,15 @@ function Sidebar() {
         { name: 'Product Orders', path: '/sales/orders', icon: ShoppingBag },
         { name: 'Payments', path: '/sales/payments', icon: CreditCard },
         { name: 'Job Issues & Proof', path: '/sales/issues', icon: AlertOctagon },
+      ]
+    },
+    {
+      title: 'Agri Finance & Assets',
+      items: [
+        { name: 'Crop & Land Loans', path: '/finance/loans', icon: Banknote },
+        { name: 'Crop Insurance', path: '/finance/insurance', icon: Umbrella },
+        { name: 'Crop Stock Market', path: '/finance/invest', icon: Coins },
+        { name: 'Warehouse Spaces', path: '/finance/warehouse', icon: Warehouse },
       ]
     },
     {
@@ -199,6 +216,10 @@ function Header({
     { name: 'Cookie & Data Use', path: '/cookie-policy', category: 'Compliance', desc: 'Admin portal session storage and browser data' },
     { name: 'Terms of Use', path: '/terms', category: 'Compliance', desc: 'Admin operating responsibilities and platform rules' },
     { name: 'Error Recovery', path: '/error', category: 'System', desc: 'Admin fallback and recovery guidance' },
+    { name: 'Crop & Land Loans Management', path: '/finance/loans', category: 'Finance', desc: 'Publish loan offers & approve farmer credit applications' },
+    { name: 'Crop Insurance & PMFBY Desk', path: '/finance/insurance', category: 'Finance', desc: 'Manage insurance policies, enrollments, and loss claims' },
+    { name: 'Crop Stock Market (Invest)', path: '/finance/invest', category: 'Finance', desc: 'Set live spot prices (Onion, Tomato, etc.) and monitor trades' },
+    { name: 'Warehouse Space Rental & Bays', path: '/finance/warehouse', category: 'Logistics', desc: 'Post warehouse spaces, daily/monthly rates, and assign bays' },
   ];
 
   const searchResults = searchQuery.trim()
@@ -1460,6 +1481,12 @@ function App() {
               <Route path="/sales/orders" element={<ProductOrdersPage selectedRegionId={selectedRegionId} />} />
               <Route path="/sales/payments" element={<PaymentsPage selectedRegionId={selectedRegionId} />} />
               <Route path="/sales/issues" element={<OperationsReviewPage selectedRegionId={selectedRegionId} mode="ISSUES" />} />
+
+              {/* Agri Finance & Assets */}
+              <Route path="/finance/loans" element={<LoansPage />} />
+              <Route path="/finance/insurance" element={<InsurancePage />} />
+              <Route path="/finance/invest" element={<CropInvestPage />} />
+              <Route path="/finance/warehouse" element={<WarehousePage />} />
 
               {/* Catalog & Settings */}
               <Route path="/catalog/vehicles" element={<VehicleServicesPage selectedRegionId={selectedRegionId} />} />

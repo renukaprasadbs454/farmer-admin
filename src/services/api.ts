@@ -298,3 +298,173 @@ export async function replyAdminConversationApi(id: string, text: string, mediaU
     body: JSON.stringify({ text, mediaUrl }),
   });
 }
+
+// ── Agri Finance & Assets: Loans API ──
+export async function fetchLoanOffers(loanType?: string, isActive?: boolean) {
+  const params = new URLSearchParams();
+  if (loanType && loanType !== 'ALL') params.append('loanType', loanType);
+  if (isActive !== undefined) params.append('isActive', String(isActive));
+  return request<any>(`/loans/offers?${params.toString()}`);
+}
+
+export async function createLoanOfferApi(payload: Record<string, any>) {
+  return request<any>('/loans/offers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateLoanOfferApi(id: string, payload: Record<string, any>) {
+  return request<any>(`/loans/offers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteLoanOfferApi(id: string) {
+  return request<any>(`/loans/offers/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchLoanApplications(status?: string, loanType?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (status && status !== 'ALL') params.append('status', status);
+  if (loanType && loanType !== 'ALL') params.append('loanType', loanType);
+  if (search) params.append('search', search);
+  return request<any>(`/loans/applications?${params.toString()}`);
+}
+
+export async function updateLoanApplicationStatusApi(id: string, payload: { status: string; approvedAmount?: number; adminRemarks?: string }) {
+  return request<any>(`/loans/applications/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Agri Finance & Assets: Crop Insurance API ──
+export async function fetchInsuranceOffers(insuranceType?: string, isActive?: boolean) {
+  const params = new URLSearchParams();
+  if (insuranceType && insuranceType !== 'ALL') params.append('insuranceType', insuranceType);
+  if (isActive !== undefined) params.append('isActive', String(isActive));
+  return request<any>(`/insurance/offers?${params.toString()}`);
+}
+
+export async function createInsuranceOfferApi(payload: Record<string, any>) {
+  return request<any>('/insurance/offers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateInsuranceOfferApi(id: string, payload: Record<string, any>) {
+  return request<any>(`/insurance/offers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteInsuranceOfferApi(id: string) {
+  return request<any>(`/insurance/offers/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchInsuranceApplications(status?: string, cropSeason?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (status && status !== 'ALL') params.append('status', status);
+  if (cropSeason && cropSeason !== 'ALL') params.append('cropSeason', cropSeason);
+  if (search) params.append('search', search);
+  return request<any>(`/insurance/applications?${params.toString()}`);
+}
+
+export async function updateInsuranceApplicationStatusApi(id: string, payload: { status: string; policyNumber?: string; adminRemarks?: string; claimStatus?: string }) {
+  return request<any>(`/insurance/applications/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Agri Finance & Assets: Crop Stock Market (Invest) API ──
+export async function fetchCropCommodities(category?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (category && category !== 'ALL') params.append('category', category);
+  if (search) params.append('search', search);
+  return request<any>(`/invest/crops?${params.toString()}`);
+}
+
+export async function createCropCommodityApi(payload: Record<string, any>) {
+  return request<any>('/invest/crops', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateCropPriceApi(id: string, newPrice: number, remarks?: string) {
+  return request<any>(`/invest/crops/${id}/price`, {
+    method: 'PATCH',
+    body: JSON.stringify({ newPrice, remarks }),
+  });
+}
+
+export async function updateCropCommodityApi(id: string, payload: Record<string, any>) {
+  return request<any>(`/invest/crops/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteCropCommodityApi(id: string) {
+  return request<any>(`/invest/crops/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchInvestAdminOverviewApi() {
+  return request<any>('/invest/admin/overview');
+}
+
+// ── Agri Finance & Assets: Warehouse Management API ──
+export async function fetchWarehouseListings(warehouseType?: string, district?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (warehouseType && warehouseType !== 'ALL') params.append('warehouseType', warehouseType);
+  if (district) params.append('district', district);
+  if (search) params.append('search', search);
+  return request<any>(`/warehouses/listings?${params.toString()}`);
+}
+
+export async function createWarehouseListingApi(payload: Record<string, any>) {
+  return request<any>('/warehouses/listings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateWarehouseListingApi(id: string, payload: Record<string, any>) {
+  return request<any>(`/warehouses/listings/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteWarehouseListingApi(id: string) {
+  return request<any>(`/warehouses/listings/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchWarehouseBookings(status?: string, warehouseId?: string, search?: string) {
+  const params = new URLSearchParams();
+  if (status && status !== 'ALL') params.append('status', status);
+  if (warehouseId && warehouseId !== 'ALL') params.append('warehouseId', warehouseId);
+  if (search) params.append('search', search);
+  return request<any>(`/warehouses/bookings?${params.toString()}`);
+}
+
+export async function assignWarehouseBookingApi(id: string, payload: { status: string; assignedBayNumber?: string; adminRemarks?: string }) {
+  return request<any>(`/warehouses/bookings/${id}/assign`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
